@@ -32,14 +32,34 @@ func NewUserHandler(
 // Register 用户注册
 // @Summary      用户注册
 // @Description  创建新用户账号
-// @Tags         用户
+// @Tags         用户模块
 // @Accept       json
 // @Produce      json
 // @Param        request body dto.RegisterRequest true "注册信息"
 // @Success      200 {object} response.Response{data=dto.UserResponse} "注册成功"
 // @Failure      400 {object} response.Response "参数错误"
 // @Failure      409 {object} response.Response "邮箱已存在"
-// @Router       /api/v1/users/register [post]
+// @Router       /users/register [post]
+//
+// 教学说明：Swagger注释详解
+//   - @Summary: 接口简短描述（显示在接口列表）
+//   - @Description: 接口详细描述
+//   - @Tags: 接口分组标签（方便在Swagger UI中分类）
+//   - @Accept: 请求Content-Type
+//   - @Produce: 响应Content-Type
+//   - @Param: 参数定义
+//     格式: name paramType dataType required comment
+//   - name: 参数名（这里是request，表示请求体）
+//   - paramType: body（请求体）| query（查询参数）| path（路径参数）| header（请求头）
+//   - dataType: 数据类型（dto.RegisterRequest）
+//   - required: 是否必填（true/false）
+//   - comment: 参数说明
+//   - @Success: 成功响应
+//     格式: httpCode dataType comment
+//     {data=dto.UserResponse} 表示data字段的类型
+//   - @Failure: 失败响应
+//   - @Router: 路由定义（path + httpMethod）
+//     注意：路径是相对于@BasePath的，所以是/users/register而不是/api/v1/users/register
 func (h *UserHandler) Register(c *gin.Context) {
 	// 1. 绑定并验证参数
 	// 学习要点：Gin的ShouldBindJSON会自动校验binding tag
@@ -76,14 +96,26 @@ func (h *UserHandler) Register(c *gin.Context) {
 // Login 用户登录
 // @Summary      用户登录
 // @Description  验证邮箱密码，返回JWT Token
-// @Tags         用户
+// @Tags         用户模块
 // @Accept       json
 // @Produce      json
 // @Param        request body dto.LoginRequest true "登录信息"
-// @Success      200 {object} response.Response{data=dto.LoginResponse} "登录成功"
+// @Success      200 {object} response.Response{data=dto.LoginResponse} "登录成功，返回access_token和refresh_token"
 // @Failure      400 {object} response.Response "参数错误"
 // @Failure      401 {object} response.Response "邮箱或密码错误"
-// @Router       /api/v1/users/login [post]
+// @Failure      404 {object} response.Response "用户不存在"
+// @Router       /users/login [post]
+//
+// 教学说明：JWT认证流程
+// 1. 客户端发送邮箱+密码
+// 2. 服务端验证密码（bcrypt对比哈希值）
+// 3. 验证成功后生成JWT Token：
+//   - Access Token: 有效期2小时，用于API认证
+//   - Refresh Token: 有效期7天，用于刷新Access Token
+//
+// 4. 将Session信息存储到Redis（用于登出功能）
+// 5. 返回Token给客户端
+// 6. 客户端后续请求携带Token: Authorization: Bearer <token>
 func (h *UserHandler) Login(c *gin.Context) {
 	// 1. 绑定并验证参数
 	var req dto.LoginRequest

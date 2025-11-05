@@ -4,160 +4,136 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/gin-gonic/gin"
-
-	appbook "github.com/xiebiao/bookstore/internal/application/book"
-	apporder "github.com/xiebiao/bookstore/internal/application/order"
-	appuser "github.com/xiebiao/bookstore/internal/application/user"
-	"github.com/xiebiao/bookstore/internal/domain/book"
-	"github.com/xiebiao/bookstore/internal/domain/user"
-	"github.com/xiebiao/bookstore/internal/infrastructure/config"
-	"github.com/xiebiao/bookstore/internal/infrastructure/persistence/mysql"
-	"github.com/xiebiao/bookstore/internal/infrastructure/persistence/redis"
-	"github.com/xiebiao/bookstore/internal/interface/http/handler"
-	"github.com/xiebiao/bookstore/internal/interface/http/middleware"
-	"github.com/xiebiao/bookstore/pkg/jwt"
-	"github.com/xiebiao/bookstore/pkg/response"
+	_ "github.com/xiebiao/bookstore/docs" // Swagger文档导入
 )
 
+// @title           图书商城API文档
+// @version         1.0
+// @description     这是一个教学导向的Go微服务实战项目的API文档
+// @description     本项目演示了DDD分层架构、Wire依赖注入、防超卖等核心技术
+//
+// @contact.name    项目维护者
+// @contact.url     https://github.com/xiebiao/bookstore
+// @contact.email   xiebiao@example.com
+//
+// @license.name    MIT
+// @license.url     https://opensource.org/licenses/MIT
+//
+// @host      localhost:8080
+// @BasePath  /api/v1
+//
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 输入"Bearer {token}"进行身份验证
+//
+// @externalDocs.description   项目文档
+// @externalDocs.url           https://github.com/xiebiao/bookstore/blob/main/README.md
+//
+// 教学说明：Swagger注释格式
+// - @title: API文档标题
+// - @version: API版本号
+// - @description: API描述（支持多行）
+// - @host: API服务地址
+// - @BasePath: API基础路径
+// - @securityDefinitions: 定义认证方式（JWT Bearer Token）
+// - @contact: 联系信息
+// - @license: 许可证信息
+//
+// Swagger的价值：
+// 1. 自动生成API文档，减少手动维护成本
+// 2. 提供交互式测试界面，方便前端调试
+// 3. 文档与代码同步，避免文档过时
+// 4. 支持多语言客户端SDK生成
+
 // main 主程序入口
-// 当前版本：Phase 1 - Week 2 Day 8-9 - 图书上架功能
-// 说明：手动依赖注入（Week 3会引入Wire自动生成）
+// 当前版本：Phase 1 - Week 3 Day 15-16 - Wire依赖注入
+//
+// 教学说明：
+// 对比重构前后的main.go：
+//
+// 重构前（手动依赖注入）：
+// - 需要手动创建所有依赖（60+行代码）
+// - 依赖顺序容易出错
+// - 新增依赖需要手动调整多处代码
+// - 代码冗长，可读性差
+//
+// 重构后（Wire自动生成）：
+// - 只需调用InitializeApp()（1行代码）
+// - Wire自动分析依赖链，保证顺序正确
+// - 新增依赖只需在wire.go中添加Provider
+// - main.go专注于启动逻辑，职责清晰
+//
+// Wire的价值：
+// 1. 编译期生成代码，零运行时开销
+// 2. 类型安全，编译期检测依赖错误
+// 3. 自动检测循环依赖
+// 4. 代码可读性高，便于维护
 func main() {
+	// 使用Wire初始化整个应用
+	// Wire会自动：
 	// 1. 加载配置
-	cfg, err := config.Load()
+	// 2. 初始化数据库和Redis连接
+	// 3. 创建所有Repository、Service、UseCase、Handler
+	// 4. 注册所有路由
+	// 5. 返回配置好的Gin引擎
+	engine, err := InitializeApp()
 	if err != nil {
-		log.Fatalf("加载配置失败: %v", err)
+		log.Fatalf("应用初始化失败: %v", err)
 	}
 
-	fmt.Printf("✓ 配置加载成功\n")
-	fmt.Printf("  - 服务端口: %d\n", cfg.Server.Port)
-	fmt.Printf("  - 运行模式: %s\n", cfg.Server.Mode)
-	fmt.Printf("  - 数据库: %s:%d/%s\n", cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName)
-	fmt.Printf("  - Redis: %s\n", cfg.Redis.Addr())
+	// 启动服务（保留原有的启动信息打印）
+	// 注意：这里无法访问cfg对象（Wire的返回值限制）
+	// 解决方案：将端口号硬编码或从环境变量读取
+	// 生产环境建议：使用环境变量或配置文件
+	port := 8080 // 默认端口，与config.yaml保持一致
 
-	// 2. 初始化数据库连接
-	db, err := mysql.NewDB(cfg)
-	if err != nil {
-		log.Fatalf("初始化数据库失败: %v", err)
-	}
-
-	// 3. 初始化Redis连接
-	redisClient, err := redis.NewClient(cfg)
-	if err != nil {
-		log.Fatalf("初始化Redis失败: %v", err)
-	}
-
-	// 4. 依赖注入（手动组装）
-	// 学习要点：依赖注入链
-	// Repository ← Service ← UseCase ← Handler
-
-	// 基础设施层
-	userRepo := mysql.NewUserRepository(db)
-	bookRepo := mysql.NewBookRepository(db)   // 图书仓储
-	orderRepo := mysql.NewOrderRepository(db) // 订单仓储
-	txManager := mysql.NewTxManager(db)       // 事务管理器
-	sessionStore := redis.NewSessionStore(redisClient)
-	jwtManager := jwt.NewManager(
-		cfg.JWT.Secret,
-		cfg.JWT.AccessTokenExpire,
-		cfg.JWT.RefreshTokenExpire,
-	)
-
-	// 领域层
-	userService := user.NewService(userRepo)
-	bookService := book.NewService(bookRepo) // 图书领域服务
-
-	// 应用层
-	registerUseCase := appuser.NewRegisterUseCase(userService)
-	loginUseCase := appuser.NewLoginUseCase(userService, jwtManager, sessionStore)
-	publishBookUseCase := appbook.NewPublishBookUseCase(bookService)                     // 图书上架用例
-	listBooksUseCase := appbook.NewListBooksUseCase(bookService)                         // 图书列表用例
-	createOrderUseCase := apporder.NewCreateOrderUseCase(orderRepo, bookRepo, txManager) // 下单用例
-
-	// 接口层
-	userHandler := handler.NewUserHandler(registerUseCase, loginUseCase)
-	bookHandler := handler.NewBookHandler(publishBookUseCase, listBooksUseCase) // 图书处理器
-	orderHandler := handler.NewOrderHandler(createOrderUseCase)                 // 订单处理器
-	authMiddleware := middleware.NewAuthMiddleware(jwtManager, sessionStore)
-
-	// 5. 初始化Gin引擎
-	if cfg.Server.Mode == "release" {
-		gin.SetMode(gin.ReleaseMode)
-	}
-	r := gin.Default()
-
-	// 6. 注册路由
-	registerRoutes(r, userHandler, bookHandler, orderHandler, authMiddleware)
-
-	// 7. 启动服务
-	addr := fmt.Sprintf(":%d", cfg.Server.Port)
-	fmt.Printf("\n🚀 服务启动成功！\n")
+	addr := fmt.Sprintf(":%d", port)
+	fmt.Printf("\n🚀 服务启动成功（使用Wire依赖注入 + Swagger文档）\n")
 	fmt.Printf("   访问地址: http://localhost%s\n", addr)
 	fmt.Printf("   健康检查: http://localhost%s/ping\n", addr)
-	fmt.Printf("   用户注册: POST http://localhost%s/api/v1/users/register\n", addr)
-	fmt.Printf("   用户登录: POST http://localhost%s/api/v1/users/login\n", addr)
-	fmt.Printf("   图书上架: POST http://localhost%s/api/v1/books (需要登录)\n", addr)
+	fmt.Printf("   API文档: http://localhost%s/swagger/index.html\n", addr)
+	fmt.Printf("\n   教学要点：\n")
+	fmt.Printf("   - Wire自动生成了所有依赖注入代码（见wire_gen.go）\n")
+	fmt.Printf("   - Swagger自动生成了API文档（见docs/swagger.json）\n")
+	fmt.Printf("   - main.go从100+行精简到30行\n")
+	fmt.Printf("   - 依赖管理集中在wire.go，职责清晰\n")
 	fmt.Printf("\n按Ctrl+C停止服务\n\n")
 
-	if err := r.Run(addr); err != nil {
+	if err := engine.Run(addr); err != nil {
 		log.Fatalf("启动服务失败: %v", err)
 	}
 }
 
-// registerRoutes 注册路由
-func registerRoutes(r *gin.Engine, userHandler *handler.UserHandler, bookHandler *handler.BookHandler, orderHandler *handler.OrderHandler, authMiddleware *middleware.AuthMiddleware) {
-	// 健康检查
-	r.GET("/ping", func(c *gin.Context) {
-		response.Success(c, gin.H{
-			"message": "pong",
-			"status":  "healthy",
-		})
-	})
-
-	// API路由组
-	v1 := r.Group("/api/v1")
-	{
-		// 用户模块（公开接口，不需要登录）
-		users := v1.Group("/users")
-		{
-			users.POST("/register", userHandler.Register) // ✅ 注册
-			users.POST("/login", userHandler.Login)       // ✅ 登录
-		}
-
-		// 需要认证的路由（示例）
-		authorized := v1.Group("")
-		authorized.Use(authMiddleware.RequireAuth()) // 应用认证中间件
-		{
-			// 用户个人信息（需要登录）
-			authorized.GET("/profile", func(c *gin.Context) {
-				// 从Context获取当前登录用户信息
-				userID := middleware.GetUserID(c)
-				email := middleware.GetEmail(c)
-
-				response.Success(c, gin.H{
-					"user_id": userID,
-					"email":   email,
-					"message": "这是需要登录才能访问的接口",
-				})
-			})
-		}
-
-		// 图书模块
-		books := v1.Group("/books")
-		{
-			// 查询图书列表(公开接口,不需要登录)
-			books.GET("", bookHandler.ListBooks) // ✅ 图书列表
-
-			// 上架图书(需要登录)
-			books.POST("", authMiddleware.RequireAuth(), bookHandler.PublishBook) // ✅ 图书上架
-		}
-
-		// 订单模块
-		orders := v1.Group("/orders")
-		orders.Use(authMiddleware.RequireAuth()) // 订单相关都需要登录
-		{
-			orders.POST("", orderHandler.CreateOrder) // ✅ 创建订单
-		}
-	}
-}
+// 教学总结：Wire重构带来的好处
+//
+// 1. 代码简洁性
+//    - 重构前：100+行（包含所有依赖创建代码）
+//    - 重构后：30行（只保留启动逻辑）
+//    - 减少代码量：70%+
+//
+// 2. 可维护性
+//    - 依赖管理集中在wire.go
+//    - main.go只关注启动流程
+//    - 新增功能只需修改wire.go
+//
+// 3. 类型安全
+//    - 编译期检查依赖关系
+//    - 自动检测循环依赖
+//    - 参数类型不匹配时编译失败
+//
+// 4. 开发效率
+//    - 无需手动管理依赖顺序
+//    - 重构时自动更新依赖链
+//    - 减少人为错误
+//
+// 5. 性能
+//    - 编译期生成，零运行时反射
+//    - 与手写代码性能完全相同
+//    - 无运行时开销
+//
+// 对比Spring的@Autowired（运行时反射注入）：
+// - Spring：运行时通过反射扫描@Autowired注解，动态注入依赖
+// - Wire：编译期生成代码，生成的是普通Go函数调用
+// - Spring的灵活性更高（可以热加载），但有运行时开销
+// - Wire牺牲了一些灵活性，但性能更好，更符合Go的设计哲学

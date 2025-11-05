@@ -1,0 +1,476 @@
+basePath: /api/v1
+definitions:
+  github_com_xiebiao_bookstore_internal_interface_http_dto.BookListItem:
+    properties:
+      author:
+        example: 威廉·肯尼迪
+        type: string
+      cover_url:
+        example: https://example.com/cover.jpg
+        type: string
+      created_at:
+        example: "2024-01-15 10:30:00"
+        type: string
+      id:
+        example: 1
+        type: integer
+      isbn:
+        example: "9787115428028"
+        type: string
+      price:
+        example: 5900
+        type: integer
+      price_yuan:
+        example: "59.00"
+        type: string
+      publisher:
+        example: 人民邮电出版社
+        type: string
+      stock:
+        example: 100
+        type: integer
+      title:
+        example: Go语言实战
+        type: string
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.BookResponse:
+    properties:
+      author:
+        example: 威廉·肯尼迪
+        type: string
+      cover_url:
+        example: https://example.com/cover.jpg
+        type: string
+      created_at:
+        example: "2024-01-15 10:30:00"
+        type: string
+      description:
+        example: 这是一本关于Go语言的实战书籍
+        type: string
+      id:
+        example: 1
+        type: integer
+      isbn:
+        example: "9787115428028"
+        type: string
+      price:
+        description: 价格(分)
+        example: 5900
+        type: integer
+      price_yuan:
+        description: 价格(元),方便前端显示
+        example: "59.00"
+        type: string
+      publisher:
+        example: 人民邮电出版社
+        type: string
+      publisher_id:
+        example: 1
+        type: integer
+      stock:
+        example: 100
+        type: integer
+      title:
+        example: Go语言实战
+        type: string
+      updated_at:
+        example: "2024-01-15 10:30:00"
+        type: string
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.CreateOrderItemRequest:
+    properties:
+      book_id:
+        type: integer
+      quantity:
+        maximum: 999
+        minimum: 1
+        type: integer
+    required:
+    - book_id
+    - quantity
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.CreateOrderRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.CreateOrderItemRequest'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.CreateOrderResponse:
+    properties:
+      created_at:
+        example: "2024-11-06 10:30:00"
+        type: string
+      order_id:
+        example: 1
+        type: integer
+      order_no:
+        example: ORD1699248000123456
+        type: string
+      status:
+        example: 待支付
+        type: string
+      total:
+        example: 11800
+        type: integer
+      total_yuan:
+        example: "118.00"
+        type: string
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.ListBooksResponse:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.BookListItem'
+        type: array
+      page:
+        example: 1
+        type: integer
+      size:
+        example: 20
+        type: integer
+      total:
+        example: 100
+        type: integer
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.UserInfo'
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.PublishBookRequest:
+    properties:
+      author:
+        example: 威廉·肯尼迪
+        maxLength: 100
+        type: string
+      cover_url:
+        example: https://example.com/cover.jpg
+        maxLength: 500
+        type: string
+      description:
+        example: 这是一本关于Go语言的实战书籍
+        maxLength: 5000
+        type: string
+      isbn:
+        example: "9787115428028"
+        type: string
+      price:
+        description: 价格(分),59.00元
+        example: 5900
+        maximum: 999999
+        minimum: 1
+        type: integer
+      publisher:
+        example: 人民邮电出版社
+        maxLength: 100
+        type: string
+      stock:
+        example: 100
+        minimum: 0
+        type: integer
+      title:
+        example: Go语言实战
+        maxLength: 200
+        type: string
+    required:
+    - author
+    - isbn
+    - price
+    - publisher
+    - title
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.RegisterRequest:
+    properties:
+      email:
+        type: string
+      nickname:
+        maxLength: 50
+        minLength: 2
+        type: string
+      password:
+        maxLength: 20
+        minLength: 8
+        type: string
+    required:
+    - email
+    - nickname
+    - password
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.UserInfo:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      nickname:
+        type: string
+    type: object
+  github_com_xiebiao_bookstore_internal_interface_http_dto.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      nickname:
+        type: string
+    type: object
+  github_com_xiebiao_bookstore_pkg_response.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: xiebiao@example.com
+    name: 项目维护者
+    url: https://github.com/xiebiao/bookstore
+  description: |-
+    这是一个教学导向的Go微服务实战项目的API文档
+    本项目演示了DDD分层架构、Wire依赖注入、防超卖等核心技术
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: 图书商城API文档
+  version: "1.0"
+paths:
+  /books:
+    get:
+      consumes:
+      - application/json
+      description: 分页查询图书列表，支持关键词搜索和排序（公开接口，无需登录）
+      parameters:
+      - default: 1
+        description: 页码（默认1）
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: 每页数量（默认20，最大100）
+        in: query
+        maximum: 100
+        minimum: 1
+        name: page_size
+        type: integer
+      - description: 搜索关键词（匹配标题/作者/出版社）
+        in: query
+        name: keyword
+        type: string
+      - default: created_at_desc
+        description: 排序方式
+        enum:
+        - price_asc
+        - price_desc
+        - created_at_desc
+        in: query
+        name: sort_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.ListBooksResponse'
+              type: object
+        "400":
+          description: 参数错误（如page_size超过100）
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+      summary: 图书列表
+      tags:
+      - 图书模块
+    post:
+      consumes:
+      - application/json
+      description: 会员发布图书商品上架（需要登录）
+      parameters:
+      - description: 图书信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.PublishBookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 上架成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.BookResponse'
+              type: object
+        "400":
+          description: 参数错误（如ISBN格式错误、价格超出范围）
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+        "409":
+          description: ISBN已存在
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 发布图书
+      tags:
+      - 图书模块
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: 用户下单购买图书（需要登录），使用悲观锁防止超卖
+      parameters:
+      - description: 订单信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 下单成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.CreateOrderResponse'
+              type: object
+        "400":
+          description: 参数错误（如商品数量超过999）
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+        "404":
+          description: 图书不存在
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+        "50001":
+          description: 库存不足
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建订单
+      tags:
+      - 订单模块
+  /users/login:
+    post:
+      consumes:
+      - application/json
+      description: 验证邮箱密码，返回JWT Token
+      parameters:
+      - description: 登录信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功，返回access_token和refresh_token
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.LoginResponse'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+        "401":
+          description: 邮箱或密码错误
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+      summary: 用户登录
+      tags:
+      - 用户模块
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      description: 创建新用户账号
+      parameters:
+      - description: 注册信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_xiebiao_bookstore_internal_interface_http_dto.UserResponse'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+        "409":
+          description: 邮箱已存在
+          schema:
+            $ref: '#/definitions/github_com_xiebiao_bookstore_pkg_response.Response'
+      summary: 用户注册
+      tags:
+      - 用户模块
+securityDefinitions:
+  BearerAuth:
+    description: 输入"Bearer {token}"进行身份验证
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

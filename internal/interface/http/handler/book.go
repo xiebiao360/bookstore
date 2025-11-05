@@ -25,17 +25,23 @@ func NewBookHandler(publishBookUseCase *appbook.PublishBookUseCase, listBooksUse
 
 // PublishBook 发布图书(上架)
 // @Summary      发布图书
-// @Description  会员发布图书商品上架
-// @Tags         图书
+// @Description  会员发布图书商品上架（需要登录）
+// @Tags         图书模块
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
 // @Param        request body dto.PublishBookRequest true "图书信息"
-// @Success      200 {object} response.Response{data=dto.BookResponse}
-// @Failure      400 {object} response.Response "参数错误"
+// @Success      200 {object} response.Response{data=dto.BookResponse} "上架成功"
+// @Failure      400 {object} response.Response "参数错误（如ISBN格式错误、价格超出范围）"
 // @Failure      401 {object} response.Response "未登录"
 // @Failure      409 {object} response.Response "ISBN已存在"
-// @Router       /api/v1/books [post]
+// @Router       /books [post]
+//
+// 教学说明：@Security注释
+// - @Security BearerAuth: 表示此接口需要JWT认证
+// - BearerAuth在main.go中定义为securityDefinitions
+// - Swagger UI会显示🔒图标，并提供Token输入框
+// - 测试时需先调用/users/login获取token，然后点击Authorize按钮输入
 func (h *BookHandler) PublishBook(c *gin.Context) {
 	// 1. 参数绑定与验证
 	var req dto.PublishBookRequest
@@ -85,17 +91,28 @@ func (h *BookHandler) PublishBook(c *gin.Context) {
 
 // ListBooks 查询图书列表
 // @Summary      图书列表
-// @Description  分页查询图书列表,支持关键词搜索和排序
-// @Tags         图书
+// @Description  分页查询图书列表，支持关键词搜索和排序（公开接口，无需登录）
+// @Tags         图书模块
 // @Accept       json
 // @Produce      json
-// @Param        page      query    int    false "页码(默认1)"
-// @Param        page_size query    int    false "每页数量(默认20,最大100)"
-// @Param        keyword   query    string false "搜索关键词(标题/作者/出版社)"
-// @Param        sort_by   query    string false "排序方式(price_asc/price_desc/created_at_desc)"
-// @Success      200 {object} response.Response{data=appbook.ListBooksResponse}
-// @Failure      400 {object} response.Response "参数错误"
-// @Router       /api/v1/books [get]
+// @Param        page      query    int    false "页码（默认1）" default(1) minimum(1)
+// @Param        page_size query    int    false "每页数量（默认20，最大100）" default(20) minimum(1) maximum(100)
+// @Param        keyword   query    string false "搜索关键词（匹配标题/作者/出版社）"
+// @Param        sort_by   query    string false "排序方式" Enums(price_asc, price_desc, created_at_desc) default(created_at_desc)
+// @Success      200 {object} response.Response{data=dto.ListBooksResponse} "查询成功"
+// @Failure      400 {object} response.Response "参数错误（如page_size超过100）"
+// @Router       /books [get]
+//
+// 教学说明：Query参数注释
+// - @Param的格式: name in type required comment [attributes]
+// - in类型: query（URL参数）| path（路径参数）| body（请求体）| header（请求头）
+// - attributes（可选）:
+//   - default(value): 默认值
+//   - minimum(value): 最小值
+//   - maximum(value): 最大值
+//   - Enums(v1,v2,v3): 枚举值
+//
+// - Swagger UI会根据这些属性生成友好的输入控件（如下拉框、数字输入框）
 func (h *BookHandler) ListBooks(c *gin.Context) {
 	// 1. 参数绑定与验证
 	var req dto.ListBooksRequest
