@@ -1,5 +1,7 @@
 ## 🎯 图书商城微服务学习项目专属指令
 
+最重要的原则：**必须读取TEACHING.md文档以确保符合教学导向要求。**
+
 **当前教学项目**：图书商城微服务系统
 **蓝图文档**：`/home/xiebiao/Workspace/bookstore/ROADMAP.md`
 

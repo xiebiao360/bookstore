@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/spf13/viper"
@@ -40,9 +41,12 @@ type DatabaseConfig struct {
 
 // DSN 生成MySQL连接字符串
 // 格式：user:password@tcp(host:port)/dbname?charset=utf8mb4&parseTime=True&loc=Local
+// 注意：loc参数需要URL编码（Asia/Shanghai → Asia%2FShanghai）
 func (d DatabaseConfig) DSN() string {
+	// URL编码loc参数
+	loc := url.QueryEscape(d.Loc)
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=%t&loc=%s",
-		d.User, d.Password, d.Host, d.Port, d.DBName, d.Charset, d.ParseTime, d.Loc)
+		d.User, d.Password, d.Host, d.Port, d.DBName, d.Charset, d.ParseTime, loc)
 }
 
 type RedisConfig struct {
@@ -63,9 +67,9 @@ func (r RedisConfig) Addr() string {
 }
 
 type JWTConfig struct {
-	Secret              string        `mapstructure:"secret"`
-	AccessTokenExpire   time.Duration `mapstructure:"access_token_expire"`
-	RefreshTokenExpire  time.Duration `mapstructure:"refresh_token_expire"`
+	Secret             string        `mapstructure:"secret"`
+	AccessTokenExpire  time.Duration `mapstructure:"access_token_expire"`
+	RefreshTokenExpire time.Duration `mapstructure:"refresh_token_expire"`
 }
 
 type LogConfig struct {
