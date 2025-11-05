@@ -27,6 +27,7 @@ import (
 
 import (
 	_ "github.com/xiebiao/bookstore/docs"
+	_ "net/http/pprof"
 )
 
 // Injectors from wire.go:

@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof" // pprof性能分析工具（自动注册 /debug/pprof 路由）
 
 	_ "github.com/xiebiao/bookstore/docs" // Swagger文档导入
 )
@@ -82,22 +84,59 @@ func main() {
 		log.Fatalf("应用初始化失败: %v", err)
 	}
 
-	// 启动服务（保留原有的启动信息打印）
-	// 注意：这里无法访问cfg对象（Wire的返回值限制）
-	// 解决方案：将端口号硬编码或从环境变量读取
-	// 生产环境建议：使用环境变量或配置文件
-	port := 8080 // 默认端口，与config.yaml保持一致
+	// ==================== 性能分析工具集成 ====================
+	// Day 20: 集成pprof性能分析工具
+	//
+	// 教学说明：pprof是什么？
+	// pprof是Go官方提供的性能分析工具，可以分析：
+	// 1. CPU性能（找出最耗CPU的函数）
+	// 2. 内存分配（找出内存泄漏和高分配点）
+	// 3. Goroutine数量（检测goroutine泄漏）
+	// 4. 阻塞分析（找出锁竞争问题）
+	// 5. 互斥锁争用（找出锁的热点）
+	//
+	// 为什么需要独立的pprof服务器？
+	// - 主服务器(8080)用于业务流量，加入pprof路由会有安全风险
+	// - 独立的pprof服务器(6060)便于防火墙隔离（生产环境不对外暴露）
+	// - 避免性能分析影响业务服务
+	//
+	// 最佳实践：
+	// - 开发环境：启用pprof便于调试
+	// - 生产环境：通过防火墙限制6060端口访问，或通过堡垒机访问
+	// - 避免在公网暴露pprof端点（可能泄露内存数据）
+	go func() {
+		pprofAddr := ":6060"
+		fmt.Printf("🔍 pprof性能分析服务已启动: http://localhost%s/debug/pprof\n", pprofAddr)
+		fmt.Printf("   常用端点：\n")
+		fmt.Printf("   - CPU分析:    http://localhost%s/debug/pprof/profile?seconds=30\n", pprofAddr)
+		fmt.Printf("   - 内存分析:    http://localhost%s/debug/pprof/heap\n", pprofAddr)
+		fmt.Printf("   - Goroutine:  http://localhost%s/debug/pprof/goroutine\n", pprofAddr)
+		fmt.Printf("   - 全部指标:    http://localhost%s/debug/pprof\n", pprofAddr)
+		fmt.Printf("   使用方法：\n")
+		fmt.Printf("     go tool pprof http://localhost%s/debug/pprof/profile?seconds=30\n", pprofAddr)
+		fmt.Printf("     go tool pprof http://localhost%s/debug/pprof/heap\n\n", pprofAddr)
 
+		// 启动pprof HTTP服务器
+		// http.DefaultServeMux已自动注册了pprof的所有路由（通过import _ "net/http/pprof"）
+		if err := http.ListenAndServe(pprofAddr, nil); err != nil {
+			log.Printf("pprof服务启动失败: %v", err)
+		}
+	}()
+	// ========================================================
+
+	// 启动业务服务
+	port := 8080 // 默认端口，与config.yaml保持一致
 	addr := fmt.Sprintf(":%d", port)
-	fmt.Printf("\n🚀 服务启动成功（使用Wire依赖注入 + Swagger文档）\n")
-	fmt.Printf("   访问地址: http://localhost%s\n", addr)
+
+	fmt.Printf("\n🚀 服务启动成功（Wire依赖注入 + Swagger文档 + pprof性能分析）\n")
+	fmt.Printf("   业务服务: http://localhost%s\n", addr)
 	fmt.Printf("   健康检查: http://localhost%s/ping\n", addr)
 	fmt.Printf("   API文档: http://localhost%s/swagger/index.html\n", addr)
 	fmt.Printf("\n   教学要点：\n")
 	fmt.Printf("   - Wire自动生成了所有依赖注入代码（见wire_gen.go）\n")
 	fmt.Printf("   - Swagger自动生成了API文档（见docs/swagger.json）\n")
-	fmt.Printf("   - main.go从100+行精简到30行\n")
-	fmt.Printf("   - 依赖管理集中在wire.go，职责清晰\n")
+	fmt.Printf("   - pprof提供实时性能分析（见 http://localhost:6060/debug/pprof）\n")
+	fmt.Printf("   - main.go职责清晰：初始化 + 启动服务\n")
 	fmt.Printf("\n按Ctrl+C停止服务\n\n")
 
 	if err := engine.Run(addr); err != nil {

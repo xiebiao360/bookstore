@@ -166,8 +166,18 @@ test-unit: ## 仅运行单元测试（快速，不依赖外部服务）
 
 test-integration: ## 仅运行集成测试（需要真实数据库）
 	@echo "运行集成测试（需要Docker环境）..."
-	@docker compose ps | grep -q mysql || (echo "请先启动Docker: make docker-up" && exit 1)
-	@go test -v -cover ./test/integration/...
+	@docker compose ps | grep -q mysql || (echo "❌ 请先启动Docker: make docker-up" && exit 1)
+	@echo "✓ Docker环境已运行"
+	@echo ""
+	@echo "教学说明："
+	@echo "  集成测试使用真实的MySQL和Redis"
+	@echo "  测试会创建真实的数据库记录"
+	@echo "  测试模块："
+	@echo "    - test/integration/user_test.go (用户注册、登录、认证)"
+	@echo "    - test/integration/book_test.go (图书上架、列表、参数验证)"
+	@echo "    - test/integration/order_test.go (订单创建、库存控制、并发防超卖)"
+	@echo ""
+	@go test -v -count=1 ./test/integration/...
 
 test-coverage: ## 生成测试覆盖率HTML报告
 	@echo "生成覆盖率报告..."
@@ -380,3 +390,188 @@ wire: ## 生成依赖注入代码
 generate: swag wire ## 运行所有代码生成工具（Swagger + Wire）
 	@echo ""
 	@echo "✓ 所有代码生成完成"
+
+# ========================================
+# 性能分析与优化（Week 4 Day 20-21）
+# ========================================
+# 教学说明：
+#   pprof是Go官方性能分析工具，可以分析：
+#     - CPU热点（哪些函数最耗CPU）
+#     - 内存分配（找出内存泄漏）
+#     - Goroutine泄漏（检测协程泄漏）
+#
+#   服务启动后pprof默认监听: http://localhost:6060/debug/pprof
+#
+#   分析流程：
+#     1. 启动服务（make run）
+#     2. 压测（make bench-api）
+#     3. 采集profile（make pprof-cpu）
+#     4. 分析数据（pprof交互模式）
+# ========================================
+
+pprof-web: ## 启动pprof Web界面（需要先运行服务）
+	@echo "启动pprof Web界面..."
+	@echo "请确保服务已运行（make run）"
+	@echo "正在打开浏览器: http://localhost:8082"
+	@echo ""
+	@echo "教学说明："
+	@echo "  这是pprof最直观的使用方式，提供："
+	@echo "    • Graph: 调用图"
+	@echo "    • Flame Graph: 火焰图（横轴越宽=越慢）"
+	@echo "    • Top: 热点函数列表"
+	@echo "    • Source: 源码级分析"
+	@echo ""
+	@sleep 2
+	@go tool pprof -http=:8082 http://localhost:6060/debug/pprof/profile?seconds=30
+
+pprof-cpu: ## 采集CPU性能数据（30秒）
+	@echo "采集CPU性能数据（30秒）..."
+	@echo "请在采集期间对服务进行压测（另开终端运行: make bench-api）"
+	@echo ""
+	@mkdir -p pprof
+	@echo "开始采集..."
+	@curl -s http://localhost:6060/debug/pprof/profile?seconds=30 > pprof/cpu.prof
+	@echo "✓ CPU profile已保存: pprof/cpu.prof"
+	@echo ""
+	@echo "分析方法："
+	@echo "  1. 交互模式: go tool pprof pprof/cpu.prof"
+	@echo "  2. Web界面: go tool pprof -http=:8082 pprof/cpu.prof"
+	@echo "  3. 生成火焰图: go tool pprof -http=:8082 pprof/cpu.prof"
+	@echo ""
+	@echo "常用pprof命令："
+	@echo "  top10      - 显示CPU占用最高的10个函数"
+	@echo "  list 函数名 - 显示函数源码和CPU占用"
+	@echo "  web        - 生成调用图（需要graphviz）"
+
+pprof-mem: ## 采集内存分配数据
+	@echo "采集内存分配数据..."
+	@mkdir -p pprof
+	@curl -s http://localhost:6060/debug/pprof/heap > pprof/heap.prof
+	@echo "✓ Heap profile已保存: pprof/heap.prof"
+	@echo ""
+	@echo "分析方法："
+	@echo "  go tool pprof pprof/heap.prof"
+	@echo ""
+	@echo "教学说明："
+	@echo "  heap profile显示当前内存中存活的对象"
+	@echo "  如果内存持续增长，说明可能存在内存泄漏"
+	@echo "  对比两个不同时间点的heap profile可以找出泄漏点"
+
+pprof-goroutine: ## 检查goroutine数量（检测协程泄漏）
+	@echo "检查goroutine状态..."
+	@mkdir -p pprof
+	@curl -s http://localhost:6060/debug/pprof/goroutine > pprof/goroutine.prof
+	@echo "✓ Goroutine profile已保存: pprof/goroutine.prof"
+	@echo ""
+	@echo "Goroutine数量："
+	@curl -s http://localhost:6060/debug/pprof/goroutine?debug=1 | head -1
+	@echo ""
+	@echo "教学说明："
+	@echo "  正常情况下goroutine数量应该稳定（如20-50个）"
+	@echo "  如果持续增长（如从100涨到10000），说明存在goroutine泄漏"
+	@echo "  常见原因："
+	@echo "    • goroutine中有无限循环，没有退出条件"
+	@echo "    • channel发送/接收阻塞，goroutine永久等待"
+	@echo "    • 忘记关闭资源（如HTTP连接）"
+
+pprof-allocs: ## 分析内存分配速率（包括已GC的对象）
+	@echo "采集内存分配数据（allocs）..."
+	@mkdir -p pprof
+	@curl -s http://localhost:6060/debug/pprof/allocs > pprof/allocs.prof
+	@echo "✓ Allocs profile已保存: pprof/allocs.prof"
+	@echo ""
+	@echo "heap vs allocs的区别："
+	@echo "  • heap: 当前内存中存活的对象（已减去GC回收的）"
+	@echo "  • allocs: 累计分配的所有对象（包括已回收的）"
+	@echo ""
+	@echo "教学说明："
+	@echo "  如果allocs增长很快，说明分配速率高，GC压力大"
+	@echo "  优化方向：减少临时对象分配，复用对象（sync.Pool）"
+
+bench-api: ## 压测API接口（使用wrk工具）
+	@echo "========================================"
+	@echo " API压力测试"
+	@echo "========================================"
+	@echo ""
+	@which wrk > /dev/null || (echo "❌ 请先安装wrk压测工具" && echo "" && echo "安装方法：" && echo "  macOS:  brew install wrk" && echo "  Ubuntu: sudo apt install wrk" && echo "  CentOS: sudo yum install wrk" && exit 1)
+	@echo "请选择压测目标："
+	@echo "  1. 健康检查接口（/ping）"
+	@echo "  2. 图书列表接口（/api/v1/books）"
+	@echo "  3. 用户注册接口（/api/v1/users/register）"
+	@echo ""
+	@read -p "输入数字[1-3]: " choice; \
+	case $$choice in \
+		1) make bench-ping ;; \
+		2) make bench-books ;; \
+		3) make bench-register ;; \
+		*) echo "无效选择" ;; \
+	esac
+
+bench-ping: ## 压测健康检查接口
+	@echo "压测 /ping 接口（10线程，100并发，持续30秒）..."
+	@wrk -t10 -c100 -d30s http://localhost:8080/ping
+	@echo ""
+	@echo "教学说明："
+	@echo "  -t10: 使用10个线程"
+	@echo "  -c100: 模拟100个并发连接"
+	@echo "  -d30s: 持续30秒"
+	@echo ""
+	@echo "关注指标："
+	@echo "  • Requests/sec: QPS（每秒请求数）"
+	@echo "  • Latency: 响应延迟（平均值、P50、P99）"
+	@echo "  • Transfer/sec: 吞吐量"
+
+bench-books: ## 压测图书列表接口
+	@echo "压测 /api/v1/books 接口（10线程，100并发，持续30秒）..."
+	@wrk -t10 -c100 -d30s http://localhost:8080/api/v1/books
+	@echo ""
+	@echo "教学说明："
+	@echo "  这是一个数据库查询接口，性能瓶颈可能在："
+	@echo "    • 数据库连接池配置"
+	@echo "    • SQL查询效率（缺少索引）"
+	@echo "    • JSON序列化（返回字段过多）"
+	@echo ""
+	@echo "优化方向："
+	@echo "  1. 添加Redis缓存"
+	@echo "  2. 数据库索引优化"
+	@echo "  3. 减少返回字段"
+
+bench-register: ## 压测用户注册接口（需要脚本）
+	@echo "⚠️  注册接口压测需要生成随机邮箱，暂未实现"
+	@echo ""
+	@echo "手动压测方法："
+	@echo "  1. 编写Lua脚本生成随机请求体"
+	@echo "  2. wrk -s register.lua http://localhost:8080/api/v1/users/register"
+	@echo ""
+	@echo "示例Lua脚本（register.lua）："
+	@echo '  request = function()'
+	@echo '    local email = "user" .. math.random(1, 1000000) .. "@test.com"'
+	@echo '    local body = string.format([[{"email":"%s","password":"Test1234","nickname":"压测用户"}]], email)'
+	@echo '    return wrk.format("POST", "/api/v1/users/register", {["Content-Type"]="application/json"}, body)'
+	@echo '  end'
+
+pprof-report: ## 生成完整的性能分析报告
+	@echo "生成性能分析报告..."
+	@echo ""
+	@echo "========================================"
+	@echo " 性能分析报告"
+	@echo "========================================"
+	@echo ""
+	@echo "1. Goroutine数量："
+	@curl -s http://localhost:6060/debug/pprof/goroutine?debug=1 | head -1
+	@echo ""
+	@echo "2. 内存使用情况："
+	@curl -s http://localhost:6060/debug/pprof/heap?debug=1 | grep -E "Alloc|TotalAlloc|Sys|NumGC" | head -5
+	@echo ""
+	@echo "3. GC统计："
+	@curl -s http://localhost:6060/debug/pprof/heap?debug=1 | grep -A5 "# runtime.MemStats"
+	@echo ""
+	@echo "详细分析："
+	@echo "  • CPU分析: make pprof-cpu"
+	@echo "  • 内存分析: make pprof-mem"
+	@echo "  • Web界面: make pprof-web"
+
+pprof-clean: ## 清理所有pprof文件
+	@echo "清理pprof文件..."
+	@rm -rf pprof/
+	@echo "✓ pprof/ 已清理"
