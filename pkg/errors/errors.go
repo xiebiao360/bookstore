@@ -76,15 +76,19 @@ const (
 	ErrCodeForbidden       = 40104 // 无权限
 
 	// 资源错误（40400-40499）
+	ErrCodeNotFound      = 40400 // 资源不存在(通用)
 	ErrCodeUserNotFound  = 40401 // 用户不存在
 	ErrCodeBookNotFound  = 40402 // 图书不存在
 	ErrCodeOrderNotFound = 40403 // 订单不存在
 
 	// 业务规则错误（40000-40099）
+	ErrCodeBusinessError      = 40000 // 业务错误(通用)
 	ErrCodeInsufficientStock  = 40001 // 库存不足
 	ErrCodeInvalidOrderStatus = 40002 // 订单状态非法
 	ErrCodeEmailDuplicate     = 40003 // 邮箱已存在
-	ErrCodeWeakPassword       = 40004 // 密码强度不足
+	ErrCodeISBNDuplicate      = 40004 // ISBN已存在
+	ErrCodeWeakPassword       = 40005 // 密码强度不足
+	ErrCodeDuplicateEntry     = 40009 // 重复记录(通用)
 
 	// 参数错误（40900-40999）
 	ErrCodeInvalidParams = 40900 // 参数错误
@@ -117,6 +121,7 @@ var (
 	ErrInsufficientStock  = New(ErrCodeInsufficientStock, "库存不足")
 	ErrInvalidOrderStatus = New(ErrCodeInvalidOrderStatus, "订单状态不允许此操作")
 	ErrEmailDuplicate     = New(ErrCodeEmailDuplicate, "邮箱已被注册")
+	ErrISBNDuplicate      = New(ErrCodeISBNDuplicate, "ISBN号已存在")
 	ErrWeakPassword       = New(ErrCodeWeakPassword, "密码强度不足（需8-20位，包含字母和数字）")
 
 	// 参数错误

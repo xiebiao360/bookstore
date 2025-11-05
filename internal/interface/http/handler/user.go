@@ -15,12 +15,17 @@ import (
 // 3. 使用依赖注入，便于测试
 type UserHandler struct {
 	registerUseCase *appuser.RegisterUseCase
+	loginUseCase    *appuser.LoginUseCase
 }
 
 // NewUserHandler 创建用户处理器
-func NewUserHandler(registerUseCase *appuser.RegisterUseCase) *UserHandler {
+func NewUserHandler(
+	registerUseCase *appuser.RegisterUseCase,
+	loginUseCase *appuser.LoginUseCase,
+) *UserHandler {
 	return &UserHandler{
 		registerUseCase: registerUseCase,
+		loginUseCase:    loginUseCase,
 	}
 }
 
@@ -65,6 +70,50 @@ func (h *UserHandler) Register(c *gin.Context) {
 		ID:       result.ID,
 		Email:    result.Email,
 		Nickname: result.Nickname,
+	})
+}
+
+// Login 用户登录
+// @Summary      用户登录
+// @Description  验证邮箱密码，返回JWT Token
+// @Tags         用户
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.LoginRequest true "登录信息"
+// @Success      200 {object} response.Response{data=dto.LoginResponse} "登录成功"
+// @Failure      400 {object} response.Response "参数错误"
+// @Failure      401 {object} response.Response "邮箱或密码错误"
+// @Router       /api/v1/users/login [post]
+func (h *UserHandler) Login(c *gin.Context) {
+	// 1. 绑定并验证参数
+	var req dto.LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.ErrorWithCode(c, 40900, "参数错误: "+err.Error())
+		return
+	}
+
+	// 2. 调用登录用例
+	result, err := h.loginUseCase.Execute(c.Request.Context(), appuser.LoginRequest{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+
+	if err != nil {
+		// 登录失败（邮箱不存在或密码错误）
+		response.Error(c, err)
+		return
+	}
+
+	// 3. 返回成功响应（包含Token）
+	response.Success(c, &dto.LoginResponse{
+		User: dto.UserInfo{
+			ID:       result.User.ID,
+			Email:    result.User.Email,
+			Nickname: result.User.Nickname,
+		},
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		ExpiresIn:    result.ExpiresIn,
 	})
 }
 

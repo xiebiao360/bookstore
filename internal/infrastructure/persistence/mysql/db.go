@@ -81,7 +81,7 @@ func autoMigrate(db *gorm.DB) error {
 	// 注意：这里需要使用GORM的模型定义（带tag），不是domain层的实体
 	return db.AutoMigrate(
 		&UserModel{},
-		// &BookModel{},    // Week 2添加
+		&BookModel{}, // Week 2添加
 		// &OrderModel{},   // Week 2添加
 	)
 }
@@ -104,4 +104,30 @@ type UserModel struct {
 // TableName 指定表名
 func (UserModel) TableName() string {
 	return "users"
+}
+
+// BookModel GORM图书模型
+// 设计说明:
+// 1. 价格使用int64存储"分"为单位(避免浮点数精度问题)
+// 2. ISBN有唯一索引,防止重复
+// 3. PublisherID关联用户表,支持查询某用户发布的所有图书
+type BookModel struct {
+	ID          uint           `gorm:"primaryKey"`
+	ISBN        string         `gorm:"uniqueIndex;size:20;not null;comment:ISBN号"`
+	Title       string         `gorm:"size:200;not null;comment:书名"`
+	Author      string         `gorm:"size:100;not null;comment:作者"`
+	Publisher   string         `gorm:"size:100;not null;comment:出版社"`
+	Price       int64          `gorm:"not null;comment:价格(分)"`
+	Stock       int            `gorm:"default:0;comment:库存数量"`
+	CoverURL    string         `gorm:"size:500;comment:封面图片URL"`
+	Description string         `gorm:"type:text;comment:图书描述"`
+	PublisherID uint           `gorm:"index;not null;comment:发布者用户ID"`
+	CreatedAt   time.Time      `gorm:"comment:创建时间"`
+	UpdatedAt   time.Time      `gorm:"comment:更新时间"`
+	DeletedAt   gorm.DeletedAt `gorm:"index;comment:删除时间(软删除)"`
+}
+
+// TableName 指定表名
+func (BookModel) TableName() string {
+	return "books"
 }

@@ -18,6 +18,9 @@ type Service interface {
 	// Register 用户注册
 	Register(ctx context.Context, email, password, nickname string) (*User, error)
 
+	// Login 用户登录
+	Login(ctx context.Context, email, password string) (*User, error)
+
 	// ValidatePassword 验证密码
 	ValidatePassword(hashedPassword, plainPassword string) error
 }
@@ -69,6 +72,25 @@ func (s *service) Register(ctx context.Context, email, password, nickname string
 	// 6. 持久化到数据库
 	if err := s.repo.Create(ctx, user); err != nil {
 		return nil, err // Repository已转换为业务错误
+	}
+
+	return user, nil
+}
+
+// Login 用户登录
+// 业务规则：
+// 1. 邮箱必须存在
+// 2. 密码必须正确
+func (s *service) Login(ctx context.Context, email, password string) (*User, error) {
+	// 1. 根据邮箱查找用户
+	user, err := s.repo.FindByEmail(ctx, email)
+	if err != nil {
+		return nil, err // Repository已转换为ErrUserNotFound
+	}
+
+	// 2. 验证密码
+	if err := s.ValidatePassword(user.Password, password); err != nil {
+		return nil, err // 返回ErrInvalidPassword
 	}
 
 	return user, nil
