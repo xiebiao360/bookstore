@@ -181,7 +181,9 @@ func (r *bookRepository) List(ctx context.Context, params book.ListParams) ([]*b
 func (r *bookRepository) LockByID(ctx context.Context, id uint) (*book.Book, error) {
 	var model BookModel
 	// SELECT FOR UPDATE锁定行
-	err := r.db.WithContext(ctx).Clauses(clause.Locking{Strength: "UPDATE"}).First(&model, id).Error
+	// 教学要点:必须使用getDB(ctx)从context获取事务DB
+	db := r.getDB(ctx)
+	err := db.Clauses(clause.Locking{Strength: "UPDATE"}).First(&model, id).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -197,7 +199,9 @@ func (r *bookRepository) LockByID(ctx context.Context, id uint) (*book.Book, err
 func (r *bookRepository) UpdateStock(ctx context.Context, id uint, delta int) error {
 	// 使用UPDATE语句原子性更新库存
 	// UPDATE books SET stock = stock + delta WHERE id = ? AND stock + delta >= 0
-	result := r.db.WithContext(ctx).Model(&BookModel{}).
+	// 教学要点:必须使用getDB(ctx)参与事务
+	db := r.getDB(ctx)
+	result := db.Model(&BookModel{}).
 		Where("id = ?", id).
 		Where("stock + ? >= 0", delta). // 防止库存为负
 		Update("stock", gorm.Expr("stock + ?", delta))
@@ -210,7 +214,8 @@ func (r *bookRepository) UpdateStock(ctx context.Context, id uint, delta int) er
 		// 可能是图书不存在,或者库存不足
 		// 再查一次确定原因
 		var model BookModel
-		if err := r.db.WithContext(ctx).First(&model, id).Error; err != nil {
+		db := r.getDB(ctx)
+		if err := db.First(&model, id).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return book.ErrBookNotFound
 			}
@@ -243,4 +248,13 @@ func toBookEntity(model *BookModel) *book.Book {
 		CreatedAt:   model.CreatedAt,
 		UpdatedAt:   model.UpdatedAt,
 	}
+}
+
+// getDB 从context获取事务DB,如果没有则使用默认DB
+// 教学要点:事务传递机制
+func (r *bookRepository) getDB(ctx context.Context) *gorm.DB {
+	if tx, ok := ctx.Value("tx").(*gorm.DB); ok {
+		return tx
+	}
+	return r.db
 }

@@ -75,3 +75,28 @@ func FormatPriceYuan(priceFen int64) string {
 	yuan := float64(priceFen) / 100.0
 	return fmt.Sprintf("%.2f", yuan)
 }
+
+// =========================================
+// 订单相关DTO
+// =========================================
+
+// CreateOrderRequest HTTP下单请求
+type CreateOrderRequest struct {
+	Items []CreateOrderItemRequest `json:"items" binding:"required,min=1,dive"`
+}
+
+// CreateOrderItemRequest 订单明细项
+type CreateOrderItemRequest struct {
+	BookID   uint `json:"book_id" binding:"required"`
+	Quantity int  `json:"quantity" binding:"required,min=1,max=999"`
+}
+
+// CreateOrderResponse HTTP下单响应
+type CreateOrderResponse struct {
+	OrderID   uint   `json:"order_id" example:"1"`
+	OrderNo   string `json:"order_no" example:"ORD1699248000123456"`
+	Total     int64  `json:"total" example:"11800"`
+	TotalYuan string `json:"total_yuan" example:"118.00"`
+	Status    string `json:"status" example:"待支付"`
+	CreatedAt string `json:"created_at" example:"2024-11-06 10:30:00"`
+}

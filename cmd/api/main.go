@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	appbook "github.com/xiebiao/bookstore/internal/application/book"
+	apporder "github.com/xiebiao/bookstore/internal/application/order"
 	appuser "github.com/xiebiao/bookstore/internal/application/user"
 	"github.com/xiebiao/bookstore/internal/domain/book"
 	"github.com/xiebiao/bookstore/internal/domain/user"
@@ -53,7 +54,9 @@ func main() {
 
 	// 基础设施层
 	userRepo := mysql.NewUserRepository(db)
-	bookRepo := mysql.NewBookRepository(db) // 图书仓储
+	bookRepo := mysql.NewBookRepository(db)   // 图书仓储
+	orderRepo := mysql.NewOrderRepository(db) // 订单仓储
+	txManager := mysql.NewTxManager(db)       // 事务管理器
 	sessionStore := redis.NewSessionStore(redisClient)
 	jwtManager := jwt.NewManager(
 		cfg.JWT.Secret,
@@ -68,11 +71,14 @@ func main() {
 	// 应用层
 	registerUseCase := appuser.NewRegisterUseCase(userService)
 	loginUseCase := appuser.NewLoginUseCase(userService, jwtManager, sessionStore)
-	publishBookUseCase := appbook.NewPublishBookUseCase(bookService) // 图书上架用例
+	publishBookUseCase := appbook.NewPublishBookUseCase(bookService)                     // 图书上架用例
+	listBooksUseCase := appbook.NewListBooksUseCase(bookService)                         // 图书列表用例
+	createOrderUseCase := apporder.NewCreateOrderUseCase(orderRepo, bookRepo, txManager) // 下单用例
 
 	// 接口层
 	userHandler := handler.NewUserHandler(registerUseCase, loginUseCase)
-	bookHandler := handler.NewBookHandler(publishBookUseCase) // 图书处理器
+	bookHandler := handler.NewBookHandler(publishBookUseCase, listBooksUseCase) // 图书处理器
+	orderHandler := handler.NewOrderHandler(createOrderUseCase)                 // 订单处理器
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager, sessionStore)
 
 	// 5. 初始化Gin引擎
@@ -82,7 +88,7 @@ func main() {
 	r := gin.Default()
 
 	// 6. 注册路由
-	registerRoutes(r, userHandler, bookHandler, authMiddleware)
+	registerRoutes(r, userHandler, bookHandler, orderHandler, authMiddleware)
 
 	// 7. 启动服务
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
@@ -100,7 +106,7 @@ func main() {
 }
 
 // registerRoutes 注册路由
-func registerRoutes(r *gin.Engine, userHandler *handler.UserHandler, bookHandler *handler.BookHandler, authMiddleware *middleware.AuthMiddleware) {
+func registerRoutes(r *gin.Engine, userHandler *handler.UserHandler, bookHandler *handler.BookHandler, orderHandler *handler.OrderHandler, authMiddleware *middleware.AuthMiddleware) {
 	// 健康检查
 	r.GET("/ping", func(c *gin.Context) {
 		response.Success(c, gin.H{
@@ -141,21 +147,17 @@ func registerRoutes(r *gin.Engine, userHandler *handler.UserHandler, bookHandler
 		books := v1.Group("/books")
 		{
 			// 查询图书列表(公开接口,不需要登录)
-			books.GET("", func(c *gin.Context) {
-				response.ErrorWithCode(c, 50000, "图书列表功能正在开发中(Week 2 Day 10-11)...")
-			})
+			books.GET("", bookHandler.ListBooks) // ✅ 图书列表
 
 			// 上架图书(需要登录)
 			books.POST("", authMiddleware.RequireAuth(), bookHandler.PublishBook) // ✅ 图书上架
 		}
 
-		// 订单模块（后续实现）
+		// 订单模块
 		orders := v1.Group("/orders")
 		orders.Use(authMiddleware.RequireAuth()) // 订单相关都需要登录
 		{
-			orders.POST("", func(c *gin.Context) {
-				response.ErrorWithCode(c, 50000, "订单创建功能正在开发中...")
-			})
+			orders.POST("", orderHandler.CreateOrder) // ✅ 创建订单
 		}
 	}
 }

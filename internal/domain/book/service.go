@@ -35,6 +35,10 @@ type Service interface {
 	// DeleteBook 删除图书
 	// 业务规则:只有发布者本人可以删除
 	DeleteBook(ctx context.Context, id uint, userID uint) error
+
+	// ListBooks 分页查询图书列表
+	// 公开接口,不需要权限校验
+	ListBooks(ctx context.Context, params ListParams) ([]*Book, int64, error)
 }
 
 // service 领域服务实现
@@ -160,6 +164,11 @@ func (s *service) DeleteBook(ctx context.Context, id uint, userID uint) error {
 
 	// 3. 执行删除(软删除)
 	return s.repo.Delete(ctx, id)
+}
+
+// ListBooks 分页查询图书列表
+func (s *service) ListBooks(ctx context.Context, params ListParams) ([]*Book, int64, error) {
+	return s.repo.List(ctx, params)
 }
 
 // =========================================
