@@ -1,8 +1,8 @@
 # Phase 2 - Week 5 进度总结
 
 > **时间范围**：Day 22-28  
-> **核心目标**：完成服务拆分设计和Protobuf接口定义，实现第一个微服务  
-> **当前进度**：Day 22-23 已完成 ✅
+> **核心目标**：完成服务拆分设计和Protobuf接口定义，实现第一个微服务和API Gateway  
+> **当前进度**：Day 22-28 已完成 ✅ **100%**
 
 ---
 
@@ -89,81 +89,80 @@ make proto-lint   # 检查Protobuf定义
 
 ---
 
-## 🎯 下一步计划
+### ✅ Day 24-25: 实现 user-service 微服务（已完成）
 
-### ⏳ Day 24-25: 实现 user-service（进行中）
+**输出文档**：`docs/phase2-day24-25-user-service-progress.md`
 
-**目标**：实现第一个完整的gRPC微服务
+**核心成果**：
 
-**任务清单**：
+1. **gRPC服务实现** - 5个RPC方法全部实现：
+   - ✅ Register: 用户注册
+   - ✅ Login: 用户登录（返回JWT tokens）
+   - ✅ ValidateToken: Token验证（JWT + Redis黑名单双重验证）
+   - ✅ GetUser: 获取用户信息（供其他服务调用）
+   - ✅ RefreshToken: 刷新Token（生成新Access Token）
 
-1. **创建服务目录结构**
+2. **架构复用** - 成功复用Phase 1代码：
    ```
-   services/user-service/
-   ├── cmd/main.go              # gRPC服务器
-   ├── internal/
-   │   ├── grpc/handler/        # gRPC Handler实现
-   │   ├── domain/              # 复用Phase 1
-   │   ├── application/         # 复用Phase 1
-   │   └── infrastructure/      # 复用Phase 1
-   └── config/config.yaml
+   Phase 1: HTTP Handler → UseCase → Domain Service → Repository
+   Phase 2: gRPC Handler → UseCase → Domain Service → Repository (复用！)
    ```
 
-2. **实现gRPC Handler**
-   - RegisterHandler: 用户注册
-   - LoginHandler: 用户登录
-   - ValidateTokenHandler: Token验证
-   - GetUserHandler: 获取用户信息
-   - RefreshTokenHandler: 刷新Token
-
-3. **启动gRPC服务器**
-   - 监听端口9001
-   - 注册UserServiceServer
-   - 健康检查
-
-4. **测试**
-   - 使用grpcurl测试
-   - 编写集成测试
-   - 验证与Phase 1的一致性
-
-**教学重点**：
-- Protobuf → Go代码的实现
-- gRPC服务器启动流程
-- HTTP/JSON (Phase 1) vs gRPC/Protobuf (Phase 2) 对比
-- 如何复用Phase 1的domain/application层代码
+3. **测试验证** - 所有功能测试通过：
+   - grpcurl测试5个RPC方法全部成功
+   - 服务运行在9001端口，状态正常
 
 ---
 
-### Day 26-27: 实现 api-gateway
+### ✅ Day 26-27: 实现 api-gateway（已完成）
 
-**目标**：实现HTTP→gRPC协议转换
+**核心成果**：
 
-**核心功能**：
-- HTTP接口（Gin）
-- gRPC客户端（调用user-service）
-- 统一鉴权中间件
-- 协议转换
+1. **HTTP → gRPC协议转换** - 实现完整的API网关：
+   - HTTP接口（Gin框架）
+   - gRPC客户端（调用user-service）
+   - 协议转换（HTTP/JSON ↔ gRPC/Protobuf）
+   - 错误映射（gRPC codes → HTTP status）
+
+2. **中间件体系**：
+   - Logger: 请求日志、耗时统计、请求ID
+   - CORS: 跨域处理
+   - Auth: JWT鉴权（调用user-service验证）
+   - Recovery: Panic恢复
+
+3. **测试验证** - 所有API测试通过：
+   - GET /health → 200 OK
+   - POST /api/v1/auth/register → 创建用户成功
+   - POST /api/v1/auth/login → 返回tokens
+   - GET /api/v1/users/:id (有Token) → 200 OK
+   - GET /api/v1/users/:id (无Token) → 401 Unauthorized
+   - POST /api/v1/auth/refresh → 生成新token
 
 ---
 
-### Day 28: Week 5 总结
+### ✅ Day 28: Week 5 总结（已完成）
 
-**输出**：
-- Week 5完成报告
-- 服务启动文档
-- 测试验证报告
+**输出文档**：
+- ✅ `docs/phase2-week5-summary.md` (15000+字完整总结)
+- ✅ Week 5进度更新（本文档）
+
+**核心成果**：
+- ✅ 22个文件，2602行代码，1070+行教学注释（41%注释率）
+- ✅ user-service + api-gateway 全部运行正常
+- ✅ 完整的HTTP → gRPC协议转换链路
+- ✅ 符合TEACHING.md的所有教学要求
 
 ---
 
 ## 📈 Phase 2 整体进度
 
-### Week 5: 服务拆分 + gRPC基础（当前周）
+### Week 5: 服务拆分 + gRPC基础（已完成 ✅ 100%）
 
 - [x] Day 22: 服务边界设计 ✅
 - [x] Day 23: Protobuf接口定义 ✅
-- [ ] Day 24-25: user-service实现 ⏳
-- [ ] Day 26-27: api-gateway实现
-- [ ] Day 28: Week 5总结
+- [x] Day 24-25: user-service实现 ✅
+- [x] Day 26-27: api-gateway实现 ✅
+- [x] Day 28: Week 5总结 ✅
 
 ### Week 6: 完成所有微服务拆分
 
@@ -196,12 +195,10 @@ make proto-lint   # 检查Protobuf定义
 | `docs/phase2-kickoff-plan.md` | 8000+ | Phase 2启动计划 |
 | `docs/phase2-day22-service-design.md` | 15000+ | 服务边界设计 |
 | `docs/phase2-day23-protobuf-completion.md` | 12000+ | Protobuf完成报告 |
+| `docs/phase2-day24-25-user-service-progress.md` | 10000+ | user-service实现报告 |
+| `docs/phase2-week5-summary.md` | 15000+ | Week 5完成总结 |
 
-### 待创建文档
-
-- `docs/phase2-day24-25-user-service.md` (Day 24-25)
-- `docs/phase2-day26-27-api-gateway.md` (Day 26-27)
-- `docs/phase2-week5-summary.md` (Day 28)
+**总计**：70000+字教学文档
 
 ---
 
@@ -232,31 +229,113 @@ make proto-lint   # 检查Protobuf定义
 
 ---
 
-## 📊 代码统计
+## 📊 代码统计（Week 5总计）
 
-### 新增代码
+### 新增代码文件
 
-- Protobuf定义：558行
-- 生成的Go代码：7338行
-- Makefile命令：55行
-- 验证脚本：75行
+| 模块 | 文件数 | 代码行数 | 注释行数 | 注释占比 |
+|------|-------|---------|---------|---------|
+| **Protobuf定义** | 5 | 558 | 200+ | 36% |
+| **user-service** | 8 | 489 | 250+ | 51% |
+| **api-gateway** | 9 | 1555 | 620+ | 40% |
+| **总计** | **22** | **2602** | **1070+** | **41%** |
 
-### 文档
+**教学注释占比41%，超过TEACHING.md要求的40%** ✅
 
-- 教学文档：35000+字
-- 代码注释：丰富的中文注释
+### 教学文档
+
+- Week 5教学文档：70000+字
+- 代码教学注释：丰富的中文注释（DO/DON'T对比、设计思想、替代方案）
 
 ---
 
-## ✅ 质量检查
+## ✅ 质量检查（Week 5完成标准）
 
 - [x] 所有Protobuf文件编译通过
 - [x] 生成的Go代码编译通过
 - [x] gRPC依赖已添加到go.mod
 - [x] Makefile命令测试通过
-- [x] 验证脚本运行成功
-- [x] 文档完整且详细
+- [x] user-service服务运行正常（Port 9001）
+- [x] api-gateway服务运行正常（Port 8080）
+- [x] 所有HTTP API测试通过
+- [x] 所有gRPC方法测试通过
+- [x] HTTP → gRPC协议转换正常工作
+- [x] JWT鉴权功能正常
+- [x] 日志输出完整（请求ID、耗时统计）
+- [x] 教学文档完整且详细（70000+字）
+- [x] 代码注释占比41%（超过40%要求）
+- [x] 符合TEACHING.md所有教学标准
 
 ---
 
-**下一步**：开始实现 `user-service` 微服务！
+## 🎉 Week 5 完成总结
+
+**Week 5 已 100% 完成！** 🎊
+
+### 交付物清单
+
+✅ **可运行的服务**：
+- user-service（gRPC服务，9001端口）
+- api-gateway（HTTP服务，8080端口）
+
+✅ **完整的文档**：
+- 5篇教学文档，总计70000+字
+- 丰富的代码注释（41%占比）
+
+✅ **测试验证**：
+- 5个gRPC方法全部测试通过
+- 6个HTTP API全部测试通过
+- 协议转换链路正常工作
+
+✅ **教学价值**：
+- 符合TEACHING.md的所有标准
+- DO/DON'T对比示例
+- 架构演进说明（Phase 1 → Phase 2）
+- 丰富的设计思想注释
+
+---
+
+## 🚀 下一步：Week 6 启动
+
+根据ROADMAP.md，Week 6的任务是：
+
+### Week 6: 完成所有微服务拆分
+
+**Day 29-30: catalog-service + inventory-service**
+- catalog-service（图书服务）：
+  - 图书列表查询
+  - 图书详情查询
+  - 图书搜索
+  - 图书分类
+  
+- inventory-service（库存服务）：
+  - 锁定库存（高并发场景）
+  - 释放库存
+  - 查询库存
+  - 库存预警
+
+**教学重点**：
+- 高并发库存扣减（Redis + Lua脚本）
+- 库存锁定机制
+- 库存日志
+- ElasticSearch集成（搜索功能）
+
+**Day 31-32: order-service**
+- 订单创建（调用多个微服务）
+- 订单查询
+- 订单状态管理
+- 订单取消
+
+**Day 33-34: payment-service**
+- 支付接口（Mock实现）
+- 支付回调
+- 支付状态查询
+
+**Day 35: 服务发现（Consul集成）**
+- Consul部署
+- 服务注册与健康检查
+- 客户端负载均衡
+
+---
+
+**准备好进入Week 6了！** 🚀
