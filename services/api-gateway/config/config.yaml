@@ -1,0 +1,67 @@
+# API Gateway 配置文件
+#
+# 教学说明：
+# 1. Gateway作为HTTP入口，转发请求到后端gRPC服务
+# 2. 配置包含：HTTP服务器、gRPC客户端连接、JWT密钥
+# 3. Phase 2后续会添加服务发现（Consul）配置
+
+server:
+  name: "api-gateway"
+  version: "1.0.0"
+  http_port: 8080          # HTTP服务端口
+  mode: "debug"            # gin mode: debug/release/test
+  read_timeout: 10         # HTTP读超时（秒）
+  write_timeout: 10        # HTTP写超时（秒）
+
+# gRPC服务连接配置
+# 教学重点：
+# - Phase 2 Week 5: 直连模式（host:port）
+# - Phase 2 Week 6: 将改为服务发现模式（consul://user-service）
+grpc:
+  user_service:
+    addr: "localhost:9001"      # user-service地址
+    timeout: 5                   # gRPC调用超时（秒）
+    # 后续添加：
+    # retry: 3                  # 重试次数
+    # circuit_breaker: true     # 熔断开关
+
+  # 预留其他服务配置
+  # catalog_service:
+  #   addr: "localhost:9002"
+  # order_service:
+  #   addr: "localhost:9003"
+
+# JWT配置（与user-service保持一致）
+# 教学说明：
+# Gateway需要验证Token，所以需要相同的secret
+jwt:
+  secret: "your-256-bit-secret-key-change-in-production"  # 生产环境必须修改！
+  access_token_expire: "2h"      # Access Token有效期
+  refresh_token_expire: "168h"   # Refresh Token有效期（7天）
+
+# 日志配置
+log:
+  level: "debug"              # 日志级别: debug/info/warn/error
+  format: "console"           # 日志格式: console/json
+  output: "stdout"            # 输出: stdout/文件路径
+
+# CORS配置
+cors:
+  enabled: true
+  allow_origins:
+    - "http://localhost:3000"    # 前端开发服务器
+    - "http://localhost:8080"
+  allow_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allow_headers:
+    - "Origin"
+    - "Content-Type"
+    - "Authorization"
+  expose_headers:
+    - "Content-Length"
+  allow_credentials: true
+  max_age: 3600               # 预检请求缓存时间（秒）

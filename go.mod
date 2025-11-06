@@ -2,6 +2,11 @@ module github.com/xiebiao/bookstore
 
 go 1.25.1
 
+// 排除冲突的旧版本
+exclude google.golang.org/genproto v0.0.0-20190306203927-b5d61aea6440
+
+exclude google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898
+
 require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -13,6 +18,9 @@ require (
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
 	golang.org/x/crypto v0.43.0
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251103181224-f26f9409b101
+	google.golang.org/grpc v1.76.0
+	google.golang.org/protobuf v1.36.10
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.31.1
 )
@@ -77,7 +85,12 @@ require (
 	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251103181224-f26f9409b101 // indirect
-	google.golang.org/grpc v1.76.0 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+)
+
+// 重定向所有旧版本的 genproto 到新版本
+replace (
+	google.golang.org/genproto v0.0.0-20181029155118-b69ba1387ce2 => google.golang.org/genproto/googleapis/rpc v0.0.0-20251103181224-f26f9409b101
+	google.golang.org/genproto v0.0.0-20181202183823-bd91e49a0898 => google.golang.org/genproto/googleapis/rpc v0.0.0-20251103181224-f26f9409b101
+	google.golang.org/genproto v0.0.0-20190306203927-b5d61aea6440 => google.golang.org/genproto/googleapis/rpc v0.0.0-20251103181224-f26f9409b101
 )
