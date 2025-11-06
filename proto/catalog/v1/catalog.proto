@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package catalog.v1;
+
+option go_package = "github.com/xiebiao/bookstore/proto/catalog/v1;catalogv1";
+
+// ============================================================
+// CatalogService - 图书目录服务
+// ============================================================
+// 职责：
+// 1. 图书信息查询（只读）
+// 2. 图书列表、分页、排序
+// 3. 图书搜索
+// 4. 发布图书
+//
+// 教学重点：读写分离
+// - catalog-service: 图书信息（What）
+// - inventory-service: 库存管理（How many）
+// ============================================================
+
+service CatalogService {
+  // 获取图书详情
+  // 用例：用户点击图书详情页
+  rpc GetBook(GetBookRequest) returns (GetBookResponse);
+
+  // 图书列表（分页、排序）
+  // 教学重点：
+  // 1. 分页参数（page、page_size）
+  // 2. 排序参数（sort_by: created_at, price）
+  rpc ListBooks(ListBooksRequest) returns (ListBooksResponse);
+
+  // 搜索图书
+  // 教学重点：
+  // 1. 多字段搜索（title、author、publisher）
+  // 2. Phase 3可扩展为ElasticSearch
+  rpc SearchBooks(SearchBooksRequest) returns (SearchBooksResponse);
+
+  // 发布图书（内部接口，供api-gateway调用）
+  // 教学重点：
+  // 1. 需要验证用户身份（api-gateway已完成）
+  // 2. ISBN唯一性校验
+  rpc PublishBook(PublishBookRequest) returns (PublishBookResponse);
+
+  // 批量获取图书信息（供order-service调用）
+  // 用例：创建订单时需要获取图书价格
+  rpc BatchGetBooks(BatchGetBooksRequest) returns (BatchGetBooksResponse);
+}
+
+// ============================================================
+// 请求/响应消息定义
+// ============================================================
+
+// 获取图书详情
+message GetBookRequest {
+  uint64 book_id = 1;
+}
+
+message GetBookResponse {
+  uint32 code = 1;
+  string message = 2;
+  Book book = 3;
+}
+
+// 图书列表
+message ListBooksRequest {
+  uint32 page = 1;        // 页码（从1开始）
+  uint32 page_size = 2;   // 每页数量（默认10，最大100）
+  string sort_by = 3;     // 排序字段：created_at（默认）, price
+  string order = 4;       // 排序方向：desc（默认）, asc
+}
+
+message ListBooksResponse {
+  uint32 code = 1;
+  string message = 2;
+  repeated Book books = 3;
+  uint32 total = 4;       // 总数
+  uint32 page = 5;
+  uint32 page_size = 6;
+}
+
+// 搜索图书
+message SearchBooksRequest {
+  string keyword = 1;     // 搜索关键词（匹配title、author、publisher）
+  uint32 page = 2;
+  uint32 page_size = 3;
+}
+
+message SearchBooksResponse {
+  uint32 code = 1;
+  string message = 2;
+  repeated Book books = 3;
+  uint32 total = 4;
+}
+
+// 发布图书
+message PublishBookRequest {
+  string isbn = 1;
+  string title = 2;
+  string author = 3;
+  string publisher = 4;
+  int64 price = 5;          // 价格（分）
+  string cover_url = 6;     // 封面URL（可选）
+  string description = 7;   // 描述（可选）
+  uint64 publisher_id = 8;  // 发布者用户ID
+}
+
+message PublishBookResponse {
+  uint32 code = 1;
+  string message = 2;
+  uint64 book_id = 3;
+}
+
+// 批量获取图书
+message BatchGetBooksRequest {
+  repeated uint64 book_ids = 1;
+}
+
+message BatchGetBooksResponse {
+  uint32 code = 1;
+  string message = 2;
+  repeated Book books = 3;
+}
+
+// ============================================================
+// 通用消息类型
+// ============================================================
+
+// 图书信息
+message Book {
+  uint64 id = 1;
+  string isbn = 2;
+  string title = 3;
+  string author = 4;
+  string publisher = 5;
+  int64 price = 6;          // 价格（分）
+  string cover_url = 7;
+  string description = 8;
+  uint64 publisher_id = 9;  // 发布者用户ID
+  int64 created_at = 10;    // Unix时间戳（秒）
+  int64 updated_at = 11;
+}

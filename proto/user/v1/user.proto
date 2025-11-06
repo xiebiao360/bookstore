@@ -1,0 +1,124 @@
+syntax = "proto3";
+
+package user.v1;
+
+// Go包路径（生成的Go代码将放在这个包下）
+option go_package = "github.com/xiebiao/bookstore/proto/user/v1;userv1";
+
+// ============================================================
+// UserService - 用户服务
+// ============================================================
+// 职责：
+// 1. 用户注册、登录
+// 2. JWT Token生成和验证
+// 3. 用户信息管理
+// ============================================================
+
+service UserService {
+  // 用户注册
+  // 教学重点：
+  // 1. 密码bcrypt加密（cost=12）
+  // 2. 邮箱唯一性校验
+  // 3. 返回Access Token
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // 用户登录
+  // 教学重点：
+  // 1. 密码bcrypt验证
+  // 2. 生成Access Token + Refresh Token
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // 验证Token（供其他服务调用）
+  // 教学重点：
+  // 1. JWT Token解析
+  // 2. Token过期检查
+  // 3. 返回用户ID供其他服务使用
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // 获取用户信息（供其他服务调用）
+  // 用例：order-service创建订单时需要验证用户存在性
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // 刷新Token
+  // 教学重点：Refresh Token机制
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+}
+
+// ============================================================
+// 请求/响应消息定义
+// ============================================================
+
+// 用户注册请求
+message RegisterRequest {
+  string email = 1;       // 邮箱（唯一）
+  string password = 2;    // 密码（明文传输，服务端bcrypt加密）
+  string nickname = 3;    // 昵称（可选）
+}
+
+message RegisterResponse {
+  uint32 code = 1;        // 状态码：0成功，非0失败
+  string message = 2;     // 提示信息
+  uint64 user_id = 3;     // 用户ID
+  string token = 4;       // Access Token（JWT）
+}
+
+// 用户登录请求
+message LoginRequest {
+  string email = 1;       // 邮箱
+  string password = 2;    // 密码
+}
+
+message LoginResponse {
+  uint32 code = 1;
+  string message = 2;
+  uint64 user_id = 3;
+  string token = 4;           // Access Token（有效期2小时）
+  string refresh_token = 5;   // Refresh Token（有效期7天）
+}
+
+// 验证Token请求
+message ValidateTokenRequest {
+  string token = 1;       // JWT Token
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;         // Token是否有效
+  uint64 user_id = 2;     // 用户ID（Token有效时返回）
+  string email = 3;       // 用户邮箱（Token有效时返回）
+}
+
+// 获取用户信息请求
+message GetUserRequest {
+  uint64 user_id = 1;     // 用户ID
+}
+
+message GetUserResponse {
+  uint32 code = 1;
+  string message = 2;
+  User user = 3;
+}
+
+// 刷新Token请求
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  uint32 code = 1;
+  string message = 2;
+  string token = 3;           // 新的Access Token
+  string refresh_token = 4;   // 新的Refresh Token
+}
+
+// ============================================================
+// 通用消息类型
+// ============================================================
+
+// 用户信息
+message User {
+  uint64 id = 1;
+  string email = 2;
+  string nickname = 3;
+  int64 created_at = 4;   // Unix时间戳（秒）
+  int64 updated_at = 5;
+}

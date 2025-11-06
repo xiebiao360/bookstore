@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package order.v1;
+
+option go_package = "github.com/xiebiao/bookstore/proto/order/v1;orderv1";
+
+// ============================================================
+// OrderService - 订单服务
+// ============================================================
+// 职责：
+// 1. 订单创建（Saga编排入口）
+// 2. 订单状态管理
+// 3. 订单查询
+//
+// 教学重点：
+// 1. Saga分布式事务（Week 7详细讲解）
+// 2. 订单状态机（PENDING → PAID → SHIPPED → COMPLETED）
+// 3. 订单补偿机制（支付失败时释放库存）
+// ============================================================
+
+service OrderService {
+  // 创建订单（Saga编排入口）
+  // 教学重点：
+  // 1. 调用inventory-service扣减库存
+  // 2. 调用payment-service支付
+  // 3. 失败时执行补偿（释放库存）
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+
+  // 更新订单状态
+  // 用例：支付成功后更新为PAID，发货后更新为SHIPPED
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+
+  // 查询订单详情
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+
+  // 查询用户订单列表
+  rpc ListUserOrders(ListUserOrdersRequest) returns (ListUserOrdersResponse);
+
+  // 取消订单
+  // 教学重点：
+  // 1. 只有PENDING状态可以取消
+  // 2. 调用inventory-service释放库存
+  // 3. 如果已支付，调用payment-service退款
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+}
+
+// ============================================================
+// 请求/响应消息定义
+// ============================================================
+
+// 创建订单
+message CreateOrderRequest {
+  uint64 user_id = 1;
+  repeated OrderItem items = 2;   // 订单明细
+}
+
+message CreateOrderResponse {
+  uint32 code = 1;                // 0成功，1库存不足，2支付失败，3其他错误
+  string message = 2;
+  string order_no = 3;            // 订单号
+  uint64 order_id = 4;            // 订单ID
+  int64 total = 5;                // 订单总金额（分）
+}
+
+// 订单明细
+message OrderItem {
+  uint64 book_id = 1;
+  int32 quantity = 2;
+}
+
+// 更新订单状态
+message UpdateOrderStatusRequest {
+  uint64 order_id = 1;
+  int32 status = 2;               // 状态：1待支付 2已支付 3已发货 4已完成 5已取消
+  string reason = 3;              // 状态变更原因（可选）
+}
+
+message UpdateOrderStatusResponse {
+  uint32 code = 1;
+  string message = 2;
+}
+
+// 查询订单详情
+message GetOrderRequest {
+  uint64 order_id = 1;
+}
+
+message GetOrderResponse {
+  uint32 code = 1;
+  string message = 2;
+  Order order = 3;
+}
+
+// 查询用户订单列表
+message ListUserOrdersRequest {
+  uint64 user_id = 1;
+  uint32 page = 2;
+  uint32 page_size = 3;
+  int32 status = 4;               // 状态筛选（0为全部）
+}
+
+message ListUserOrdersResponse {
+  uint32 code = 1;
+  string message = 2;
+  repeated Order orders = 3;
+  uint32 total = 4;
+}
+
+// 取消订单
+message CancelOrderRequest {
+  uint64 order_id = 1;
+  uint64 user_id = 2;             // 用于权限校验
+  string reason = 3;              // 取消原因
+}
+
+message CancelOrderResponse {
+  uint32 code = 1;
+  string message = 2;
+}
+
+// ============================================================
+// 通用消息类型
+// ============================================================
+
+// 订单信息
+message Order {
+  uint64 id = 1;
+  string order_no = 2;            // 订单号
+  uint64 user_id = 3;
+  int64 total = 4;                // 总金额（分）
+  int32 status = 5;               // 状态：1待支付 2已支付 3已发货 4已完成 5已取消
+  repeated OrderItemDetail items = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+// 订单明细（带图书信息）
+message OrderItemDetail {
+  uint64 id = 1;
+  uint64 order_id = 2;
+  uint64 book_id = 3;
+  string book_title = 4;          // 图书标题（冗余字段，避免跨服务查询）
+  int32 quantity = 5;
+  int64 price = 6;                // 下单时的单价（分）
+}

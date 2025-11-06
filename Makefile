@@ -575,3 +575,58 @@ pprof-clean: ## 清理所有pprof文件
 	@echo "清理pprof文件..."
 	@rm -rf pprof/
 	@echo "✓ pprof/ 已清理"
+
+# ========================================
+# Phase 2: Protobuf & gRPC
+# ========================================
+# 教学说明：
+#   Protobuf是高性能的接口定义语言（IDL）
+#   优势：
+#     1. 强类型：编译期检查接口一致性
+#     2. 跨语言：一份proto生成多种语言代码
+#     3. 高性能：二进制序列化比JSON快5-10倍
+#     4. 版本兼容：字段编号保证前后兼容
+# ========================================
+
+proto-gen: ## 生成所有Protobuf Go代码
+	@echo "🔨 生成Protobuf Go代码..."
+	@export PATH=$$PATH:$$HOME/go/bin && \
+	protoc --go_out=. --go_opt=paths=source_relative \
+	       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	       proto/user/v1/user.proto
+	@echo "  ✓ user.proto"
+	@export PATH=$$PATH:$$HOME/go/bin && \
+	protoc --go_out=. --go_opt=paths=source_relative \
+	       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	       proto/catalog/v1/catalog.proto
+	@echo "  ✓ catalog.proto"
+	@export PATH=$$PATH:$$HOME/go/bin && \
+	protoc --go_out=. --go_opt=paths=source_relative \
+	       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	       proto/inventory/v1/inventory.proto
+	@echo "  ✓ inventory.proto"
+	@export PATH=$$PATH:$$HOME/go/bin && \
+	protoc --go_out=. --go_opt=paths=source_relative \
+	       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	       proto/order/v1/order.proto
+	@echo "  ✓ order.proto"
+	@export PATH=$$PATH:$$HOME/go/bin && \
+	protoc --go_out=. --go_opt=paths=source_relative \
+	       --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+	       proto/payment/v1/payment.proto
+	@echo "  ✓ payment.proto"
+	@echo "✅ 所有Protobuf代码生成完成"
+	@echo ""
+	@echo "生成的文件："
+	@find proto -name "*.pb.go" -o -name "*_grpc.pb.go"
+
+proto-clean: ## 清理生成的Protobuf Go代码
+	@echo "🧹 清理生成的Protobuf文件..."
+	@find proto -name "*.pb.go" -delete
+	@echo "✓ 已删除所有 *.pb.go 文件"
+
+proto-lint: ## 检查Protobuf定义格式
+	@echo "🔍 检查Protobuf定义..."
+	@echo "提示: 安装 buf 工具可以获得更强大的lint功能"
+	@echo "  brew install bufbuild/buf/buf (macOS)"
+	@echo "  或访问: https://docs.buf.build/installation"

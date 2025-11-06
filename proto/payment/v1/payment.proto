@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package payment.v1;
+
+option go_package = "github.com/xiebiao/bookstore/proto/payment/v1;paymentv1";
+
+// ============================================================
+// PaymentService - 支付服务
+// ============================================================
+// 职责：
+// 1. 支付处理（Phase 2使用Mock实现）
+// 2. 支付状态查询
+// 3. 退款处理
+//
+// 教学重点：
+// 1. 支付幂等性设计（order_id防止重复支付）
+// 2. Mock实现用于测试（70%成功率）
+// 3. Phase 3可扩展对接真实支付接口（支付宝、微信）
+// ============================================================
+
+service PaymentService {
+  // 创建支付（Mock实现：随机成功/失败）
+  // 教学重点：
+  // 1. 幂等性：相同order_id只能支付一次
+  // 2. Mock实现：70%成功率（用于测试Saga补偿机制）
+  // 3. 真实场景：对接支付宝、微信支付
+  rpc Pay(PayRequest) returns (PayResponse);
+
+  // 查询支付状态
+  // 用例：支付回调后查询最终状态
+  rpc GetPaymentStatus(GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
+
+  // 退款（订单取消时调用）
+  // 教学重点：
+  // 1. 只有已支付的订单可以退款
+  // 2. 退款也需要幂等性控制
+  rpc Refund(RefundRequest) returns (RefundResponse);
+}
+
+// ============================================================
+// 请求/响应消息定义
+// ============================================================
+
+// 创建支付
+message PayRequest {
+  uint64 order_id = 1;
+  int64 amount = 2;               // 支付金额（分）
+  string payment_method = 3;      // 支付方式：alipay, wechat, mock
+}
+
+message PayResponse {
+  uint32 code = 1;                // 0成功，1失败
+  string message = 2;
+  string payment_no = 3;          // 支付流水号
+  string third_party_no = 4;      // 第三方支付流水号（Mock时为空）
+}
+
+// 查询支付状态
+message GetPaymentStatusRequest {
+  uint64 order_id = 1;
+}
+
+message GetPaymentStatusResponse {
+  uint32 code = 1;
+  string message = 2;
+  Payment payment = 3;
+}
+
+// 退款
+message RefundRequest {
+  uint64 order_id = 1;
+  int64 amount = 2;               // 退款金额（分）
+  string reason = 3;              // 退款原因
+}
+
+message RefundResponse {
+  uint32 code = 1;
+  string message = 2;
+  string refund_no = 3;           // 退款流水号
+}
+
+// ============================================================
+// 通用消息类型
+// ============================================================
+
+// 支付信息
+message Payment {
+  uint64 id = 1;
+  string payment_no = 2;          // 支付流水号
+  uint64 order_id = 3;
+  int64 amount = 4;               // 支付金额（分）
+  int32 status = 5;               // 状态：1待支付 2已支付 3已退款 4失败
+  string payment_method = 6;      // 支付方式
+  string third_party_no = 7;      // 第三方支付流水号
+  int64 created_at = 8;
+  int64 updated_at = 9;
+}

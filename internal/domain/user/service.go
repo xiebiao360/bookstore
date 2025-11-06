@@ -23,6 +23,9 @@ type Service interface {
 
 	// ValidatePassword 验证密码
 	ValidatePassword(hashedPassword, plainPassword string) error
+
+	// GetByID 根据ID获取用户
+	GetByID(ctx context.Context, id uint) (*User, error)
 }
 
 type service struct {
@@ -107,6 +110,12 @@ func (s *service) ValidatePassword(hashedPassword, plainPassword string) error {
 		return apperrors.Wrap(err, "密码验证失败")
 	}
 	return nil
+}
+
+// GetByID 根据ID获取用户
+// 说明：供其他服务调用，获取用户基本信息
+func (s *service) GetByID(ctx context.Context, id uint) (*User, error) {
+	return s.repo.FindByID(ctx, id)
 }
 
 // =========================================

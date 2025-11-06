@@ -1,0 +1,40 @@
+# user-service 配置文件
+# 教学说明：微服务配置通常包含服务端口、数据库连接、日志等
+
+server:
+  grpc_port: 9001 # gRPC服务端口
+  http_port: 9101 # 健康检查HTTP端口（可选）
+  name: "user-service"
+  version: "1.0.0"
+
+database:
+  host: "localhost"
+  port: 3306
+  username: "bookstore"
+  password: "bookstore123"
+  dbname: "user_db" # Phase 2使用独立数据库
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600 # 秒
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: "redis123" # Docker环境Redis密码
+  db: 0
+  pool_size: 10
+
+jwt:
+  secret: "bookstore-jwt-secret-key-2024"
+  access_token_ttl: 7200 # Access Token 有效期 2小时
+  refresh_token_ttl: 604800 # Refresh Token 有效期 7天
+
+log:
+  level: "info" # debug, info, warn, error
+  format: "json" # json, text
+  output: "stdout" # stdout, file
+
+# 服务发现（Phase 2后期引入Consul）
+# consul:
+#   address: "localhost:8500"
+#   health_check_interval: "10s"
