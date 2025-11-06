@@ -4,4 +4,10 @@ use (
 	.
 	./services/api-gateway
 	./services/user-service
+	./services/catalog-service
+	./services/inventory-service
+	./services/order-service
+	./proto/catalogv1
+	./proto/inventoryv1
+	./proto/orderv1
 )

@@ -1,0 +1,63 @@
+# catalog-service 配置文件
+#
+# 教学说明：
+# 1. 服务配置采用YAML格式（易读、易维护）
+# 2. 支持环境变量覆盖（通过Viper的AutomaticEnv）
+# 3. 敏感信息（如密码）应通过环境变量传入，不要硬编码
+
+server:
+  # gRPC服务端口
+  port: 9002
+  # 读超时（秒）
+  read_timeout: 10
+  # 写超时（秒）
+  write_timeout: 10
+
+# 数据库配置
+database:
+  # 驱动类型
+  driver: mysql
+  # 连接地址
+  # 格式：user:password@tcp(host:port)/dbname?charset=utf8mb4&parseTime=True&loc=Local
+  dsn: "root:root123@tcp(localhost:3306)/catalog_db?charset=utf8mb4&parseTime=True&loc=Local"
+  # 最大空闲连接数
+  max_idle_conns: 10
+  # 最大打开连接数
+  max_open_conns: 100
+  # 连接最大生命周期（秒）
+  conn_max_lifetime: 3600
+  # 是否打印SQL日志（开发环境true，生产环境false）
+  log_mode: true
+
+# Redis配置
+redis:
+  # 连接地址
+  addr: "localhost:6379"
+  # 密码（为空表示无密码）
+  password: "redis123"
+  # 数据库索引（0-15）
+  db: 0
+  # 连接池大小
+  pool_size: 10
+  # 最小空闲连接数
+  min_idle_conns: 5
+
+# 缓存配置
+cache:
+  # 图书列表缓存时间（秒）
+  # 教学要点：热点数据缓存，减少数据库压力
+  list_ttl: 300 # 5分钟
+  # 图书详情缓存时间（秒）
+  # 教学要点：详情变化少，缓存时间可以更长
+  detail_ttl: 3600 # 1小时
+  # 搜索结果缓存时间（秒）
+  search_ttl: 600 # 10分钟
+
+# 日志配置
+log:
+  # 日志级别：debug、info、warn、error
+  level: debug
+  # 日志格式：json、console
+  format: console
+  # 日志输出：stdout、文件路径
+  output: stdout

@@ -1,0 +1,72 @@
+# order-service 配置文件
+#
+# 教学说明：
+# 1. order-service是业务编排服务，需要调用多个下游服务
+# 2. 核心职责：订单状态管理、分布式事务协调（Saga模式）
+# 3. 端口规划：9005（按ROADMAP.md规划）
+
+server:
+  # gRPC服务端口
+  port: 9005
+  # 超时配置
+  read_timeout: 30   # 读超时（秒，因为需要调用下游服务）
+  write_timeout: 30
+
+# 数据库配置
+database:
+  driver: mysql
+  dsn: "root:root123@tcp(localhost:3306)/order_db?charset=utf8mb4&parseTime=True&loc=Local"
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600
+  log_mode: true
+
+# Redis配置
+redis:
+  addr: "localhost:6379"
+  password: "redis123"
+  db: 2  # 使用DB2（catalog=0, inventory=1, order=2）
+  pool_size: 20
+  min_idle_conns: 5
+
+# 订单配置
+order:
+  # 订单超时时间（分钟）
+  # 教学要点：
+  # - 用户下单后15分钟内未支付，自动取消
+  # - 取消时需要调用inventory-service释放库存
+  payment_timeout: 15
+
+  # 订单号生成规则
+  # 格式：YYYYMMDDHHMMSS + 6位随机数
+  # 示例：20251106123456789012
+  order_no_prefix: ""
+
+  # 单次购买限制
+  max_items_per_order: 20      # 单个订单最多20种商品
+  max_quantity_per_item: 99    # 单个商品最多99件
+
+# 下游服务配置（gRPC客户端）
+#
+# 教学要点：
+# 1. Phase 2使用硬编码地址
+# 2. Phase 3会迁移到Consul服务发现
+# 3. 超时时间设置：
+#    - 库存扣减：5秒（Redis Lua脚本快速响应）
+#    - 支付：10秒（可能涉及第三方渠道）
+services:
+  inventory:
+    addr: "localhost:9004"
+    timeout: 5
+  payment:
+    addr: "localhost:9006"
+    timeout: 10
+  catalog:
+    addr: "localhost:9002"
+    timeout: 3
+
+# 日志配置
+log:
+  level: debug
+  format: console  # console | json
+  output: stdout

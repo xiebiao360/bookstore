@@ -1,0 +1,47 @@
+# inventory-service 配置文件
+#
+# 教学说明：
+# 1. inventory-service是高并发服务，重点关注Redis性能配置
+# 2. 库存扣减使用Redis + Lua脚本（TPS > 10000）
+# 3. MySQL作为持久化存储，Redis作为热点数据
+
+server:
+  # gRPC服务端口
+  port: 9004
+  # 读超时（秒）
+  read_timeout: 10
+  # 写超时（秒）
+  write_timeout: 10
+
+# 数据库配置
+database:
+  driver: mysql
+  dsn: "root:root123@tcp(localhost:3306)/inventory_db?charset=utf8mb4&parseTime=True&loc=Local"
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600
+  log_mode: true
+
+# Redis配置（核心！）
+redis:
+  addr: "localhost:6379"
+  password: "redis123"
+  db: 1  # 使用DB1，与catalog-service隔离
+  # 高并发场景下的连接池配置
+  pool_size: 50      # 增大连接池（默认10）
+  min_idle_conns: 10 # 保持最小空闲连接
+
+# 库存配置
+inventory:
+  # 是否启用Redis缓存（生产环境true）
+  enable_cache: true
+  # 库存预警阈值（低于此值发送告警）
+  warning_threshold: 10
+  # 库存同步间隔（秒，Redis → MySQL）
+  sync_interval: 60
+
+# 日志配置
+log:
+  level: debug
+  format: console
+  output: stdout
