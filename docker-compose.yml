@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
@@ -14,17 +12,18 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./test/fixtures:/docker-entrypoint-initdb.d  # 自动执行初始化SQL
+      - ./test/fixtures:/docker-entrypoint-initdb.d # 自动执行初始化SQL
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --default-authentication-plugin=mysql_native_password
-      - --slow_query_log=1  # 开启慢查询日志
-      - --long_query_time=2  # 超过2秒的查询记录
+      - --slow_query_log=1 # 开启慢查询日志
+      - --long_query_time=2 # 超过2秒的查询记录
     networks:
       - bookstore_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
+      test:
+        ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -61,23 +60,73 @@ services:
     networks:
       - bookstore_network
 
+  # Week 9: RabbitMQ消息队列
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: bookstore_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672" # AMQP协议端口
+      - "15672:15672" # 管理界面端口
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - bookstore_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Week 10: Jaeger分布式追踪
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: bookstore_jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" # UI界面（访问 http://localhost:16686）
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+    networks:
+      - bookstore_network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:14269/",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   mysql_data:
     driver: local
   redis_data:
     driver: local
+  rabbitmq_data:
+    driver: local
 
 networks:
   bookstore_network:
     driver: bridge
-
 # 使用说明：
-# 启动：docker-compose up -d
-# 停止：docker-compose down
-# 查看日志：docker-compose logs -f [service_name]
-# 重启：docker-compose restart [service_name]
+# 启动：docker compose up -d
+# 停止：docker compose down
+# 查看日志：docker compose logs -f [service_name]
+# 重启：docker compose restart [service_name]
 #
 # 访问地址：
 # - MySQL: localhost:3306（用户：bookstore，密码：bookstore123）
 # - Redis: localhost:6379（密码：redis123）
 # - phpMyAdmin: http://localhost:8081
+# - RabbitMQ管理界面: http://localhost:15672（用户：admin，密码：admin123）
+# - Jaeger UI: http://localhost:16686
