@@ -70,23 +70,60 @@
 - **Docker & Docker Compose** - [安装指南](https://docs.docker.com/get-docker/)
 - **Make**（可选，推荐）- Linux/macOS自带，Windows可用Git Bash
 
-### 5分钟快速启动
+### 🎯 Phase 2 微服务一键启动（推荐）
+
+**适用于**: Week 6-10 微服务架构学习
 
 ```bash
 # 1. 克隆项目
 git clone https://github.com/xiebiao/bookstore.git
 cd bookstore
 
-# 2. 安装开发工具（首次运行）
-make install-tools
+# 2. 一键启动所有服务（基础设施 + 6个微服务）
+make start
+```
 
-# 3. 启动Docker环境（MySQL + Redis）
+启动后可访问：
+
+**📊 基础设施**:
+- MySQL: `localhost:3306` (bookstore/bookstore123)
+- phpMyAdmin: http://localhost:8081
+- Redis: `localhost:6379` (密码: redis123)
+- RabbitMQ管理: http://localhost:15672 (admin/admin123)
+- Jaeger UI: http://localhost:16686
+
+**🚀 微服务**:
+- API Gateway: http://localhost:8080
+- User Service: `grpc://localhost:50051`
+- Catalog Service: `grpc://localhost:50052`
+- Inventory Service: `grpc://localhost:50053`
+- Payment Service: `grpc://localhost:50054`
+- Order Service: `grpc://localhost:50055`
+
+**常用命令**:
+```bash
+make stop      # 停止所有服务
+make restart   # 重启所有服务
+make logs      # 查看所有日志
+make help      # 查看所有可用命令
+```
+
+### 5分钟快速启动（Phase 1 单体版）
+
+**适用于**: Week 1-5 单体架构学习
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/xiebiao/bookstore.git
+cd bookstore
+
+# 2. 启动Docker环境（MySQL + Redis）
 make docker-up
 
-# 4. 安装Go依赖
+# 3. 安装Go依赖
 go mod tidy
 
-# 5. 运行应用
+# 4. 运行应用
 make run
 ```
 
